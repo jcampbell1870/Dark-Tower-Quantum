@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="dark-tower-token" content="__TOKEN__">
+  <title>Dark Tower Quantum Portal</title>
+  <style>
+    body { font: 1rem system-ui; max-width: 52rem; margin: 2rem auto; padding: 0 1rem;
+           background: #141322; color: #f2f1ff; }
+    a { color: #bdb5ff; } textarea { width: 100%; box-sizing: border-box; }
+    textarea, pre { font-family: monospace; } pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+    button, input { margin: .5rem 0; padding: .5rem; }
+  </style>
+  <script src="/portal.js" defer></script>
+</head>
+<body>
+  <h1>Dark Tower Quantum Portal</h1>
+  <p>A hosted quantum environment for Windows 11 and other Python hosts.
+     This portal runs a local simulator, not a physical quantum computer.</p>
+  <p><a href="https://github.com/jcampbell1870/Dark-Tower-Quantum/archive/refs/heads/main.zip">Download source for Windows 11</a>
+     · <a href="https://github.com/jcampbell1870/Dark-Tower-Quantum/blob/main/docs/USER-MANUAL.txt">User manual</a></p>
+  <form id="run-form">
+    <label for="file">Open a Dark Tower quantum program (.dt)</label><br>
+    <input id="file" type="file" accept=".dt"><br>
+    <label for="source">DTL source</label>
+    <textarea id="source" rows="12" spellcheck="false">fn main() {
+    print("Dark Tower: Bell pair");
+    quantum::allocate(2);
+    quantum::h(0);
+    quantum::cx(0, 1);
+    quantum::measure_all();
+}</textarea>
+    <label for="shots">Shots (1–8192)</label>
+    <input id="shots" type="number" min="1" max="8192" value="1024" required>
+    <button id="run" type="submit">Run locally</button>
+  </form>
+  <h2>Result</h2>
+  <pre id="result" role="status" aria-live="polite">Ready.</pre>
+  <p>IBM hardware execution is available through the CLI with explicit consent.
+     Never paste IBM credentials into this page.</p>
+</body>
+</html>

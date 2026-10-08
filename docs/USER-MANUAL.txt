@@ -1,0 +1,196 @@
+DARK TOWER QUANTUM — USER MANUAL (FOUNDATION 0.1)
+================================================
+
+1. What you are operating
+
+Dark Tower is a hosted quantum operating environment running on Python 3.12+.
+It provides a language execution layer, bounded local simulator, IBM cloud
+adapter, and Windows 11 connection portal. It does not boot a computer, manage
+physical quantum devices, implement a kernel, or turn a Windows PC into a QPU.
+The existing Dark Tower language repository is:
+https://github.com/jcampbell1870/dark-tower
+
+The full language's ownership, async, FFI, modules, and other planned features
+are not implemented here. Quantum applications are written in a strict DTL
+profile; Python supplies the bootstrap host services and IBM SDK boundary.
+This is an independent project, not affiliated with IBM or Microsoft.
+
+2. Download and install on Windows 11
+
+Download:
+https://github.com/jcampbell1870/Dark-Tower-Quantum/archive/refs/heads/main.zip
+
+Extract the complete ZIP. Install Python 3.12 or newer from python.org.
+Open PowerShell in the extracted Dark-Tower-Quantum-main directory:
+
+  .\windows\Start-DarkTower.ps1
+
+If Windows blocks the unsigned script, run this instead:
+
+  py -3 -m dark_tower portal
+
+Do not weaken your system's execution policy. There is no installer, driver,
+administrator requirement, or automatic credential download. Python is a
+prerequisite; the ZIP is source, not a standalone executable. Local operation
+does not require pip installation or an IBM account.
+
+Open http://127.0.0.1:8765 in Edge, Chrome, or Firefox. Use this numeric loopback
+address, not localhost: the server validates the Host header. Keep PowerShell
+open. Ctrl+C stops the portal. To choose another port:
+
+  .\windows\Start-DarkTower.ps1 -Port 9000
+
+On Linux/macOS, from the repository folder:
+
+  python3 -m dark_tower portal
+
+3. Using the connection portal
+
+The portal connects the browser to a local Dark Tower process. Edit the default
+Bell program or select a .dt file. Choose a shot count and click Run locally.
+The file is read in your browser and sent only to your loopback server.
+Result JSON shows provider, qubits, shots, counts, and print messages.
+Errors appear in the same result panel. The page also links to the downloadable
+source distribution and this manual. The portal does not submit IBM jobs.
+
+4. Write a Dark Tower quantum program
+
+Save a UTF-8 file, for example bell.dt:
+
+  fn main() {
+      print("Dark Tower: Bell pair");
+      quantum::allocate(2);
+      quantum::h(0);
+      quantum::cx(0, 1);
+      quantum::measure_all();
+  }
+
+This uses the existing DTL specification's fn main, namespace-qualified calls,
+string literals, semicolons, and // or /* ... */ comments. The quantum namespace
+is an extension supplied by this runtime, not an existing upstream standard
+library. Programs have one main function, no parameters, and these calls only:
+
+  print("text");              Records a JSON-escaped string message.
+  quantum::allocate(n);       Allocates one register initialized to |0...0>.
+  quantum::h(q);              Hadamard gate.
+  quantum::x(q);              Pauli X (bit flip).
+  quantum::z(q);              Pauli Z (phase flip).
+  quantum::cx(control, q);    Controlled X; distinct control and target.
+  quantum::measure_all();     Terminal computational-basis measurement.
+
+All indices are zero-based nonnegative integer literals. Allocate exactly once
+before gates; measure exactly once after gates. Print calls may appear anywhere;
+their messages are returned with the completed result, not streamed. Variables,
+loops, arithmetic, custom functions, imports, and arbitrary Python/OS commands
+are rejected rather than partially executed. Text inside strings is not code.
+
+Limits (both providers): 1–12 logical qubits, 512 statements, 65536 source bytes,
+and 1–8192 shots. The local simulator uses up to 4096 complex amplitudes. These
+are safety limits, not IBM hardware capacity claims.
+
+5. CLI and results
+
+From the repository directory:
+
+  python -m dark_tower run examples/bell.dt --shots 1024 --seed 42
+
+Use py -3 in place of python on Windows if needed. --seed provides reproducible
+local sampling; without it each run may differ. Successful runs print JSON to
+stdout and exit 0; errors print to stderr and exit 1. Ctrl+C exits an interrupted
+CLI job with status 130.
+
+Counts map measured bitstrings to occurrence counts. The rightmost bit is
+qubit 0 (Qiskit ordering). Bell circuits ideally give only 00 and 11, roughly
+half each; the sum of counts is the shot count. One shot is one circuit
+execution/measurement sample. Local state-vector simulation is ideal and
+noiseless; IBM hardware results can differ because of noise and compilation.
+
+6. Connect to IBM hardware (optional, CLI only)
+
+IBM distributes Qiskit and IBM Quantum Runtime APIs, not a downloadable IBM OS.
+This project uses Qiskit 2.5.2 and qiskit-ibm-runtime 0.50.0, resolved from PyPI
+during implementation. They are pinned for reproducibility, not a guarantee of
+perpetual latest-version status. The public APIs are SamplerV2, QiskitRuntimeService
+with ibm_quantum_platform, and generate_preset_pass_manager.
+
+Use a virtual environment before installing optional dependencies:
+
+Windows PowerShell:
+  py -3 -m venv .venv
+  .\.venv\Scripts\python.exe -m pip install ".[ibm]"
+
+Linux/macOS:
+  python3 -m venv .venv
+  .venv/bin/python -m pip install ".[ibm]"
+
+Create an IBM Quantum Platform account, obtain an API key, and choose an
+instance with hardware access and quota. Read IBM's billing conditions before
+submitting. Set IBM_QUANTUM_TOKEN and IBM_QUANTUM_INSTANCE (instance CRN).
+For PowerShell, read the token interactively instead of putting it in history:
+
+  $Secret = Read-Host "IBM API key" -AsSecureString
+  $env:IBM_QUANTUM_TOKEN = [System.Net.NetworkCredential]::new("", $Secret).Password
+  $env:IBM_QUANTUM_INSTANCE = Read-Host "IBM instance CRN"
+  .\.venv\Scripts\python.exe -m dark_tower run examples/bell.dt --provider ibm --confirm-ibm --shots 1024
+
+For POSIX hosts, populate the same environment variables using your trusted
+secret manager, then invoke .venv/bin/python with the same arguments.
+Never commit credentials or paste them into the portal. They are not saved by
+Dark Tower. After use in PowerShell:
+
+  Remove-Item Env:IBM_QUANTUM_TOKEN
+  Remove-Item Env:IBM_QUANTUM_INSTANCE
+  Remove-Variable Secret
+
+--confirm-ibm is required to explicitly consent to remote execution and possible
+charges. Without --backend, the service chooses the least-busy accessible
+operational hardware with enough qubits. Add --backend BACKEND_NAME to choose
+an accessible device. This is not a ranking of IBM's “most powerful” processor;
+availability, fidelity, connectivity, and quota are workload/account dependent.
+Dark Tower compiles to the selected device's ISA before calling SamplerV2.
+The returned JSON includes backend and job_id. Submission prints the job ID
+to stderr before waiting, so you can find the job on IBM Quantum Platform.
+
+IBM jobs can queue for a long time. Interrupting the client does not cancel
+a submitted cloud job: manage/cancel it in IBM Quantum Platform. SDK errors are
+reported generically to avoid leaking credential-bearing diagnostics. Hardware
+execution requires external account access and is not verified by the local
+mocked adapter tests. There is no automatic fallback from IBM to simulation.
+
+Official references:
+https://quantum.cloud.ibm.com/docs/en/guides/hello-world
+https://quantum.cloud.ibm.com/docs/en/api/qiskit-ibm-runtime/qiskit-runtime-service
+https://quantum.cloud.ibm.com/docs/en/api/qiskit-ibm-runtime/sampler-v2
+https://github.com/jcampbell1870/dark-tower/blob/main/docs/language/spec.md
+
+7. Security and troubleshooting
+
+The portal binds only 127.0.0.1, never a LAN/public address. It validates Host
+and Origin, uses a random per-process request token, sends no CORS permissions,
+and serves only two fixed assets. Browser output is rendered as text. Submitted
+source is parsed, never evaluated as Python or passed to a shell.
+No filesystem browsing, arbitrary uploads to disk, credentials, remote providers,
+or general-purpose DTL code execution is exposed over HTTP.
+
+The portal is intended for one trusted local user, not shared/multi-user hosting.
+Other processes on your machine can access it. It has no user accounts, TLS,
+job persistence, or production scheduler. Do not expose it through a reverse
+proxy, tunnel, port forward, or public interface.
+
+  Module not found: run commands in the extracted repository root.
+  Python missing/too old: install Python 3.12+ and restart the terminal.
+  Port in use: use python -m dark_tower portal --port 9000.
+  Forbidden: use the exact printed URL; reload after restarting the server.
+  Invalid syntax: use only the quantum profile described above.
+  IBM unavailable: check optional dependencies, key, instance, device access,
+    network connectivity, and quota. Review any submitted job before retrying.
+
+8. Verification
+
+Run the standard-library tests from the repository root:
+
+  python -m unittest discover -s tests -v
+
+Tests exercise the local simulator, strict parser, CLI, mocked IBM adapter, and
+real loopback HTTP requests. They do not spend IBM quota or prove hardware
+execution, Windows kernel compatibility, or full DTL language conformance.

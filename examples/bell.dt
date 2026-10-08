@@ -1,0 +1,8 @@
+// Dark Tower quantum profile: prepare an entangled Bell pair.
+fn main() {
+    print("Dark Tower: Bell pair");
+    quantum::allocate(2);
+    quantum::h(0);
+    quantum::cx(0, 1);
+    quantum::measure_all();
+}
