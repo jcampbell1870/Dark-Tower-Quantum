@@ -1,0 +1,18 @@
+[project]
+name = "dark-tower-quantum"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.optional-dependencies]
+ibm = ["qiskit==2.5.2", "qiskit-ibm-runtime==0.50.0"]
+
+[build-system]
+requires = ["setuptools==84.0.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["dark_tower*"]
+
+[tool.setuptools.package-data]
+dark_tower = ["web/*.html", "web/*.js"]
