@@ -77,6 +77,22 @@ class RuntimeTests(unittest.TestCase):
                 simulate(parse(BELL), shots)
         self.assertEqual(sum(simulate(parse(BELL), 8192)["counts"].values()), 8192)
 
+    def test_long_comments_and_escaped_strings(self):
+        for source in ("/*" + "a/*" * 20000, '"' + '\\"' * 30000):
+            with self.subTest(prefix=source[:20]), self.assertRaises(TowerError):
+                parse(source)
+        valid = BELL.replace(
+            'print("Dark Tower: Bell pair");',
+            "/*" + "a/*" * 10000 + '*/ print("' + '\\"' * 10000 + '");'
+        )
+        self.assertEqual(parse(valid).messages, ('"' * 10000,))
+
+    def test_maximum_register(self):
+        parsed = parse(
+            "fn main() { quantum::allocate(12); quantum::x(11); quantum::measure_all(); }"
+        )
+        self.assertEqual(simulate(parsed, 1)["counts"], {"100000000000": 1})
+
     def test_cli(self):
         output = io.StringIO()
         with redirect_stdout(output):

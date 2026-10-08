@@ -25,10 +25,7 @@ class Program:
     messages: tuple[str, ...]
 
 
-TOKEN = re.compile(
-    r'\s+|//[^\n]*|/\*[\s\S]*?\*/|"(?:[^"\\\r\n]|\\.)*"'
-    r"|[A-Za-z_][A-Za-z_0-9]*|[0-9]+|::|[(){};,]"
-)
+TOKEN = re.compile(r"[A-Za-z_][A-Za-z_0-9]*|[0-9]+|::|[(){};,]")
 
 
 def parse(source: str) -> Program:
@@ -37,12 +34,37 @@ def parse(source: str) -> Program:
     tokens = []
     position = 0
     while position < len(source):
+        if source[position].isspace():
+            position += 1
+            continue
+        if source.startswith("//", position):
+            end = source.find("\n", position + 2)
+            position = len(source) if end == -1 else end + 1
+            continue
+        if source.startswith("/*", position):
+            end = source.find("*/", position + 2)
+            if end == -1:
+                raise TowerError("Unterminated block comment.")
+            position = end + 2
+            continue
+        if source[position] == '"':
+            end = position + 1
+            while end < len(source):
+                if source[end] == "\\":
+                    end += 2
+                elif source[end] == '"':
+                    tokens.append(source[position:end + 1])
+                    position = end + 1
+                    break
+                else:
+                    end += 1
+            else:
+                raise TowerError("Unterminated string literal.")
+            continue
         match = TOKEN.match(source, position)
         if not match:
             raise TowerError(f"Unsupported DTL syntax at character {position}.")
-        token = match.group()
-        if not token.isspace() and not token.startswith(("//", "/*")):
-            tokens.append(token)
+        tokens.append(match.group())
         position = match.end()
     cursor = 0
 
